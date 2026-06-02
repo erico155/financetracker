@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker - Production Ready Proportions</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body class="bg-[#121824] text-gray-200 font-sans min-h-screen pb-24">
+
+    <!-- SCREEN 0: AUTHENTICATION PORTAL (LOGIN & REGISTER) -->
+    <section id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-[#1e293b] p-6 rounded-2xl shadow-xl border border-gray-800 space-y-6">
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-white">Finance Tracker</h1>
+                <p id="auth-subtitle" class="text-xs text-gray-400 mt-1">Please sign in to your account</p>
+            </div>
+
+            <!-- Input Fields -->
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1 px-1">Username</label>
+                    <input id="auth-username" type="text" placeholder="Enter username..." class="w-full p-3 bg-[#0f172a] border border-gray-700 rounded-xl focus:outline-none focus:border-blue-500 text-white text-sm placeholder-gray-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 mb-1 px-1">Password</label>
+                    <input id="auth-password" type="password" placeholder="Enter password..." class="w-full p-3 bg-[#0f172a] border border-gray-700 rounded-xl focus:outline-none focus:border-blue-500 text-white text-sm placeholder-gray-500">
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="space-y-2.5 pt-2">
+                <button id="auth-primary-btn" onclick="handlePrimaryAuthAction()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-xl shadow-md active:scale-[0.98] transition-all text-sm">
+                    Login
+                </button>
+                <button id="auth-toggle-btn" onclick="toggleAuthMode()" class="w-full text-xs text-blue-400 hover:text-blue-300 font-semibold text-center block">
+                    Don't have an account? Register Now
+                </button>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- MAIN APPLICATION CONTAINER -->
+    <div id="app-container" class="hidden">
+        
+        <!-- TOP HEADER -->
+        <header class="bg-[#1e293b] text-white p-4 shadow-md sticky top-0 z-50 flex justify-between items-center border-b border-gray-800">
+            <div class="flex flex-col">
+                <span class="font-bold text-sm">Finance Tracker</span>
+                <span id="header-user-badge" class="text-[10px] text-blue-400 font-medium">User: </span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="handleDeleteAccountWorkflow()" class="text-xs bg-transparent hover:bg-rose-950/20 text-rose-500 font-semibold px-2.5 py-1.5 rounded-lg border border-rose-950/40 hover:border-rose-500/30 transition-all">
+                    Delete Account ⚠️
+                </button>
+                <button onclick="handleLogoutWorkflow()" class="text-xs bg-gray-800 hover:bg-rose-950/40 text-gray-400 hover:text-rose-400 px-3 py-1.5 font-bold rounded-lg border border-gray-700 hover:border-rose-900/50 transition-all">
+                    Logout 🚪
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <main class="max-w-md mx-auto p-4 space-y-6">
+
+            <!-- SCREEN 1: DASHBOARD -->
+            <section id="dashboard-screen" class="space-y-6">
+                <!-- Balance Card -->
+                <div class="bg-[#1e293b] p-6 rounded-2xl shadow-lg border border-gray-800">
+                    <h2 class="text-gray-400 text-sm font-medium">Current Balance</h2>
+                    <p id="total-balance" class="text-3xl font-bold text-white mt-1">Rp 0</p>
+                    <div class="flex justify-between mt-4 pt-4 border-t border-gray-800 text-sm font-semibold">
+                        <span class="text-emerald-400">Income: <span id="total-income">+Rp 0</span></span>
+                        <span class="text-rose-400">Expenses: <span id="total-expense">-Rp 0</span></span>
+                    </div>
+                </div>
+
+                <!-- Transaction Form -->
+                <div id="transaction-form-block" class="bg-[#1e293b] p-5 rounded-2xl shadow-lg border border-gray-800 space-y-4">
+                    <h3 id="form-action-title" class="text-white font-bold text-base">Add Transaction</h3>
+                    <input id="tx-editing-id" type="hidden" value="">
+
+                    <input id="tx-title" type="text" placeholder="Title (e.g., Salary, Food, Electricity)" class="w-full p-3 bg-[#0f172a] border border-gray-700 rounded-xl focus:outline-none focus:border-blue-500 text-white placeholder-gray-500">
+                    
+                    <!-- Amount Input & Live Shorthand -->
+                    <div class="space-y-1">
+                        <input id="tx-amount" type="number" placeholder="Amount (Rp)" oninput="formatLiveShorthand()" class="w-full p-3 bg-[#0f172a] border border-gray-700 rounded-xl focus:outline-none focus:border-blue-500 text-white placeholder-gray-500">
+                        <div id="amount-shorthand" class="text-xs text-blue-400 font-bold px-1 h-4 transition-all"></div>
+                    </div>
+
+                    <!-- Category Picker -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center px-1">
+                            <label class="text-xs text-gray-400 font-semibold">Category Tag</label>
+                            <button onclick="toggleCategoryManagerView(true)" class="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1">
+                                ⚙️ Manage Tags
+                            </button>
+                        </div>
+                        <select id="tx-category" class="w-full p-3 bg-[#0f172a] border border-gray-700 rounded-xl focus:outline-none focus:border-blue-500 text-gray-300 color-scheme-dark">
+                        </select>
+                    </div>
+                    
+                    <!-- Custom Date Picker -->
+                    <div>
+                        <label class="block text-xs text-gray-400 font-semibold mb-1 px-1">Transaction Date</label>
+                        <input id="tx-date" type="date" class="w-full p-3 bg-[#0f172a] border border-gray-700 rounded-xl focus:outline-none focus:border-blue-500 text-gray-300 color-scheme-dark">
+                        <style> .color-scheme-dark { color-scheme: dark; } </style>
+                    </div>
+
+                    <!-- Expense/Income Toggles -->
+                    <div class="flex gap-4">
+                        <label class="flex-1 flex items-center justify-center gap-2 p-3 bg-[#0f172a] rounded-xl border cursor-pointer border-gray-700 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-950/30 text-gray-300">
+                            <input type="radio" name="tx-type" value="EXPENSE" checked class="accent-rose-500"> Expense
+                        </label>
+                        <label class="flex-1 flex items-center justify-center gap-2 p-3 bg-[#0f172a] rounded-xl border cursor-pointer border-gray-700 has-[:checked]:border-emerald-500 text-gray-300">
+                            <input type="radio" name="tx-type" value="INCOME" class="accent-emerald-500"> Income
+                        </label>
+                    </div>
+                    <button id="tx-submit-btn" onclick="saveTransactionEngine()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-xl shadow-md active:scale-[0.98] transition-all">Save Transaction</button>
+                    <button id="tx-cancel-edit-btn" onclick="clearTransactionForm()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold p-2 rounded-xl text-xs hidden">Cancel Edit</button>
+                </div>
+
+                <!-- CATEGORY MANAGER INTERFACE -->
+                <div id="category-manager-block" class="bg-[#1e293b] p-5 rounded-2xl shadow-lg border border-gray-800 space-y-4 hidden">
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                        <h3 class="text-white font-bold text-base">🏷️ Manage Categories</h3>
+                        <button onclick="toggleCategoryManagerView(false)" class="text-xs text-gray-400 hover:text-white font-semibold">✕ Close</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input id="new-custom-cat-input" type="text" placeholder="New Category Name..." class="flex-1 p-2 bg-[#0f172a] border border-gray-700 rounded-lg text-xs text-white focus:outline-none">
+                        <button onclick="addCategoryViaManager()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700">Add</button>
+                    </div>
+                    <div id="manager-categories-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- History List -->
+                <div class="space-y-2">
+                    <h3 class="text-gray-400 font-bold text-sm px-1">Recent Activity</h3>
+                    <div id="tx-list" class="space-y-2"></div>
+                </div>
+            </section>
+
+            <!-- SCREEN 2: ANALYTICS -->
+            <section id="analytics-screen" class="space-y-6 hidden">
+                
+                <!-- Data Export Card -->
+                <div class="bg-[#1e293b] p-5 rounded-2xl shadow-lg border border-gray-800 space-y-4">
+                    <h3 class="text-white font-bold text-base border-b border-gray-800 pb-2 flex items-center gap-2">💾 Data Export (Filtered by Year)</h3>
+                    <div class="grid grid-cols-2 gap-3 text-xs font-bold text-center">
+                        <button onclick="exportToCSV()" class="bg-[#0f172a] hover:bg-gray-800 border border-gray-700 p-3 rounded-xl text-blue-400 transition-colors">
+                            📊 Export to CSV (Excel)
+                        </button>
+                        <button onclick="exportToTXT()" class="bg-[#0f172a] hover:bg-gray-800 border border-gray-700 p-3 rounded-xl text-amber-400 transition-colors">
+                            📄 Export to TXT Report
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-gray-500 italic text-center">Exports will include transaction files matching the selected monitoring period below.</p>
+                </div>
+
+                <!-- Cycle Configurations Card -->
+                <div class="bg-[#2e2516] p-5 rounded-2xl shadow-lg border border-amber-900/40 space-y-4">
+                    <div class="flex justify-between items-center border-b border-amber-900/30 pb-2">
+                        <h3 class="text-amber-400 font-bold text-sm flex items-center gap-2">⚙️ Filters & Cycles</h3>
+                        <div class="flex items-center gap-1.5">
+                            <label class="text-[11px] text-amber-500 font-semibold">Monitoring:</label>
+                            <select id="cfg-view-year" onchange="resetSelectedMonthAndRender()" class="p-1 bg-[#0f172a] border border-gray-700 rounded text-xs font-bold text-white focus:outline-none">
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 text-xs">
+                        <div>
+                            <label class="block text-gray-300 font-medium mb-1">Monthly Cycle Starts On:</label>
+                            <select id="cfg-month-start" onchange="saveAndRefresh()" class="w-full p-2 bg-[#0f172a] border border-gray-700 rounded-lg text-gray-200">
+                                <script>
+                                    for(let i=1; i<=28; i++) {
+                                        document.write(`<option value="${i}" ${i===25 ? 'selected' : ''}>Day ${i}</option>`);
+                                    }
+                                </script>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Visual Chart Container -->
+                <div class="bg-[#1e293b] p-5 rounded-2xl shadow-lg border border-gray-800 space-y-4">
+                    <div class="flex flex-col gap-2 border-b border-gray-800 pb-2">
+                        <h3 id="chart-card-title" class="text-white font-bold text-base">Monthly Focus</h3>
+                        
+                        <!-- SCOPE SWITCH PANEL -->
+                        <div class="flex bg-[#0f172a] p-1 rounded-xl border border-gray-800 w-full">
+                            <button id="btn-chart-month" onclick="switchChartScope('MONTHLY')" class="flex-1 text-center font-bold text-xs py-2 rounded-lg bg-blue-600 text-white transition-all">
+                                Monthly Focus
+                            </button>
+                            <button id="btn-chart-year" onclick="switchChartScope('YEARLY')" class="flex-1 text-center font-bold text-xs py-2 rounded-lg text-gray-400 hover:text-white transition-all">
+                                All-Time Yearly Summary
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 🔴 PLACEMENT BOX MATCHING YOUR IMAGE SQUARE SIGNALS -->
+                    <div class="flex items-center justify-between px-1">
+                        <div class="flex flex-col w-1/2">
+                            <label class="text-[11px] text-gray-400 font-bold mb-1 uppercase tracking-wide">Select Focus Month:</label>
+                            <select id="chart-month-dropdown" onchange="handleDropdownMonthSelection(this.value)" class="w-full p-2 bg-[#0f172a] border border-gray-700 rounded-xl text-xs font-bold text-blue-400 focus:outline-none focus:border-blue-500 shadow-inner">
+                            </select>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] text-gray-500 italic mt-4">Proportions filter live automatically.</p>
+                        </div>
+                    </div>
+
+                    <div id="finance-pie-chart" class="w-full mix-blend-screen"></div>
+                </div>
+
+                <!-- Monthly Breakdowns with Accordion Trackers -->
+                <div class="bg-[#1e293b] p-5 rounded-2xl shadow-lg border border-gray-800">
+                    <h3 class="text-white font-bold mb-1 text-base">Monthly Focus Logs</h3>
+                    <p class="text-xs text-gray-500 mb-4">Click anywhere on a month's row card to select and display its chart proportion loop.</p>
+                    <div id="monthly-list" class="space-y-3"></div>
+                </div>
+
+                <!-- All-Time Yearly Summary Tracker -->
+                <div class="bg-[#1e293b] p-5 rounded-2xl shadow-lg border border-gray-800">
+                    <h3 class="text-white font-bold mb-1 text-base">All-Time Yearly Summary Tracker</h3>
+                    <p class="text-xs text-gray-500 mb-4">Full history across all logged timeline operations.</p>
+                    <div id="yearly-list" class="space-y-3 divide-y divide-gray-800/60"></div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- MOBILE BOTTOM NAVIGATION BAR -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-[#1e293b] border-t border-gray-800 shadow-xl flex justify-around items-center h-16 max-w-md mx-auto z-50">
+            <button onclick="switchScreen('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-1 text-blue-400 font-semibold text-xs w-full py-2">
+                📊 <span>Dashboard</span>
+            </button>
+            <button onclick="switchScreen('analytics')" id="nav-analytics" class="flex flex-col items-center gap-1 text-gray-500 font-medium text-xs w-full py-2">
+                📈 <span>Analytics</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- BUSINESS LOGIC -->
+    <script>
+        let usersRegistry = JSON.parse(localStorage.getItem('finance_users_registry')) || [];
+        let currentActiveUser = localStorage.getItem('finance_active_session') || null;
+
+        let transactions = [];
+        let categories = [];
+        
+        let chartInstance = null;
+        let openAccordions = {}; 
+        let authModeIsLogin = true; 
+        
+        let activeChartScopeMode = "MONTHLY"; 
+        let targetedActiveMonthKey = null; 
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('tx-date');
+            if (dateInput) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+            evaluateActiveSessionRoute();
+        });
+
+        function evaluateActiveSessionRoute() {
+            if (currentActiveUser) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                document.getElementById('header-user-badge').innerText = `User: ${currentActiveUser}`;
+                
+                transactions = JSON.parse(localStorage.getItem(`finance_data_${currentActiveUser}`)) || [];
+                categories = JSON.parse(localStorage.getItem(`finance_categories_${currentActiveUser}`)) || ['Salary', 'Savings', 'Receivables', 'Food', 'Bills', 'General'];
+
+                initChart();
+                saveAndRefresh();
+            } else {
+                document.getElementById('app-container').classList.add('hidden');
+                document.getElementById('auth-screen').classList.remove('hidden');
+                clearAuthInputs();
+            }
+        }
+
+        function switchChartScope(newScope) {
+            activeChartScopeMode = newScope;
+            const btnMonth = document.getElementById('btn-chart-month');
+            const btnYear = document.getElementById('btn-chart-year');
+            const titleText = document.getElementById('chart-card-title');
+
+            if (activeChartScopeMode === "MONTHLY") {
+                btnMonth.className = "flex-1 text-center font-bold text-xs py-2 rounded-lg bg-blue-600 text-white transition-all";
+                btnYear.className = "flex-1 text-center font-bold text-xs py-2 rounded-lg text-gray-400 hover:text-white transition-all";
+                titleText.innerText = targetedActiveMonthKey ? `Monthly Focus (${targetedActiveMonthKey.split(' ')[1] || 'Focus'})` : "Monthly Focus";
+            } else {
+                btnMonth.className = "flex-1 text-center font-bold text-xs py-2 rounded-lg text-gray-400 hover:text-white transition-all";
+                btnYear.className = "flex-1 text-center font-bold text-xs py-2 rounded-lg bg-blue-600 text-white transition-all";
+                titleText.innerText = "All-Time Lifetime Proportion";
+            }
+            renderAnalytics(); 
+        }
+
+        function resetSelectedMonthAndRender() {
+            targetedActiveMonthKey = null; 
+            renderAnalytics();
+        }
+
+        function toggleAuthMode() {
+            authModeIsLogin = !authModeIsLogin;
+            const subtitle = document.getElementById('auth-subtitle');
+            const primaryBtn = document.getElementById('auth-primary-btn');
+            const toggleBtn = document.getElementById('auth-toggle-btn');
+
+            if (authModeIsLogin) {
+                subtitle.innerText = "Please sign in to your account";
+                primaryBtn.innerText = "Login";
+                toggleBtn.innerText = "Don't have an account? Register Now";
+            } else {
+                subtitle.innerText = "Create a new account to protect your data";
+                primaryBtn.innerText = "Register New Account";
+                toggleBtn.innerText = "Already have an account? Login here";
+            }
+        }
+
+        function handlePrimaryAuthAction() {
+            const userIn = document.getElementById('auth-username').value.trim();
+            const passIn = document.getElementById('auth-password').value;
+
+            if (!userIn || !passIn) return alert("Please complete both username and password fields!");
+            if (userIn.length < 3) return alert("Username must be at least 3 characters long!");
+
+            if (authModeIsLogin) {
+                const targetUser = usersRegistry.find(u => u.username.toLowerCase() === userIn.toLowerCase());
+                if (!targetUser || targetUser.password !== passIn) {
+                    return alert("Invalid username or password!");
+                }
+                
+                currentActiveUser = targetUser.username;
+                localStorage.setItem('finance_active_session', currentActiveUser);
+                evaluateActiveSessionRoute();
+            } else {
+                const userExists = usersRegistry.some(u => u.username.toLowerCase() === userIn.toLowerCase());
+                if (userExists) return alert("This username is already taken!");
+
+                usersRegistry.push({ username: userIn, password: passIn });
+                localStorage.setItem('finance_users_registry', JSON.stringify(usersRegistry));
+
+                alert("Registration Successful! You can now log in with your new account.");
+                authModeIsLogin = false;
+                toggleAuthMode(); 
+            }
+        }
+
+        function handleLogoutWorkflow() {
+            if (confirm("Are you sure you want to log out?")) {
+                localStorage.removeItem('finance_active_session');
+                currentActiveUser = null;
+                transactions = [];
+                categories = [];
+                targetedActiveMonthKey = null;
+                if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+                evaluateActiveSessionRoute();
+            }
+        }
+
+        function handleDeleteAccountWorkflow() {
+            if (!currentActiveUser) return;
+            
+            const firstConfirm = confirm("⚠️ WARNING: Are you sure you want to completely DELETE your account? This action cannot be undone.");
+            if (firstConfirm) {
+                const secondConfirm = confirm("🚨 FINAL CONFIRMATION: All your financial logs, categories, and account credentials will be permanently destroyed. Proceed?");
+                if (secondConfirm) {
+                    localStorage.removeItem(`finance_data_${currentActiveUser}`);
+                    localStorage.removeItem(`finance_categories_${currentActiveUser}`);
+                    
+                    usersRegistry = usersRegistry.filter(u => u.username.toLowerCase() !== currentActiveUser.toLowerCase());
+                    localStorage.setItem('finance_users_registry', JSON.stringify(usersRegistry));
+                    
+                    localStorage.removeItem('finance_active_session');
+                    currentActiveUser = null;
+                    transactions = [];
+                    categories = [];
+                    targetedActiveMonthKey = null;
+                    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+                    
+                    alert("Account and all associated records have been successfully deleted.");
+                    evaluateActiveSessionRoute();
+                }
+            }
+        }
+
+        function clearAuthInputs() {
+            document.getElementById('auth-username').value = "";
+            document.getElementById('auth-password').value = "";
+        }
+
+        function saveAndRefresh() {
+            if (!currentActiveUser) return;
+            localStorage.setItem(`finance_data_${currentActiveUser}`, JSON.stringify(transactions));
+            localStorage.setItem(`finance_categories_${currentActiveUser}`, JSON.stringify(categories));
+            
+            buildYearFilterDropdown(); 
+            renderDashboard(); 
+            renderAnalytics();
+        }
+
+        function getFilteredTransactionsForSelectedYear() {
+            const selectedFilterYear = parseInt(document.getElementById('cfg-view-year').value) || new Date().getFullYear();
+            return transactions.filter(t => new Date(t.date).getFullYear() === selectedFilterYear);
+        }
+        
+        function exportToCSV() {
+            const targetData = getFilteredTransactionsForSelectedYear();
+            const selectedYear = document.getElementById('cfg-view-year').value;
+            if (targetData.length === 0) return alert(`No transactions found for Year ${selectedYear} to export!`);
+            
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "ID,Date,Title,Category,Type,Amount (Rp)\n";
+            targetData.forEach(t => {
+                const formattedDate = new Date(t.date).toLocaleDateString('en-US');
+                const row = `${t.id},${formattedDate},"${t.title.replace(/"/g, '""')}",${t.category},${t.type},${t.amount}`;
+                csvContent += row + "\n";
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a"); link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Report_${currentActiveUser}_Year_${selectedYear}.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        function exportToTXT() {
+            const targetData = getFilteredTransactionsForSelectedYear();
+            const selectedYear = document.getElementById('cfg-view-year').value;
+            if (targetData.length === 0) return alert(`No transactions found for Year ${selectedYear} to export!`);
+
+            let totalIncome = targetData.filter(t => t.type === 'INCOME').reduce((acc, curr) => acc + curr.amount, 0);
+            let totalExpense = targetData.filter(t => t.type === 'EXPENSE').reduce((acc, curr) => acc + curr.amount, 0);
+
+            let txtContent = "=========================================\n";
+            txtContent += ` FINANCIAL STATEMENT - USER: ${currentActiveUser.toUpperCase()} - YEAR ${selectedYear}\n`;
+            txtContent += ` Generated On: ${new Date().toLocaleString('en-US')}\n`;
+            txtContent += "=========================================\n\n";
+            txtContent += `TOTAL INCOME   : Rp ${totalIncome.toLocaleString('en-US')}\n`;
+            txtContent += `TOTAL EXPENSES : Rp ${totalExpense.toLocaleString('en-US')}\n`;
+            txtContent += `NET BALANCE    : Rp ${(totalIncome - totalExpense).toLocaleString('en-US')}\n\n`;
+            txtContent += "-----------------------------------------\n";
+            txtContent += `Monthly Breakdown Statement Details (${selectedYear}):\n`;
+            txtContent += "-----------------------------------------\n";
+
+            targetData.forEach((t, index) => {
+                txtContent += `${index + 1}. [${new Date(t.date).toLocaleDateString('en-US')}] [${t.category}] ${t.title}: ${t.type === 'INCOME' ? '(+)' : '(-)'} Rp ${t.amount.toLocaleString('en-US')}\n`;
+            });
+
+            const blob = new Blob([txtContent], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+            link.download = `Report_${currentActiveUser}_Year_${selectedYear}.txt`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        function buildYearFilterDropdown() {
+            const yearSelect = document.getElementById('cfg-view-year'); if(!yearSelect) return;
+            const currentYear = new Date().getFullYear();
+            let years = [currentYear];
+            transactions.forEach(t => {
+                const txYear = new Date(t.date).getFullYear();
+                if (!years.includes(txYear)) years.push(txYear);
+            });
+            years.sort((a, b) => b - a);
+            const savedSelectedValue = yearSelect.value; yearSelect.innerHTML = '';
+            years.forEach(yr => {
+                const opt = document.createElement('option'); opt.value = yr; opt.innerText = yr; yearSelect.appendChild(opt);
+            });
+            if (savedSelectedValue && years.includes(parseInt(savedSelectedValue))) { yearSelect.value = savedSelectedValue; } else { yearSelect.value = currentYear; }
+        }
+
+        function toggleCategoryManagerView(show) {
+            const formBlock = document.getElementById('transaction-form-block');
+            const managerBlock = document.getElementById('category-manager-block');
+            if (show) {
+                formBlock.classList.add('hidden'); managerBlock.classList.remove('hidden'); renderCategoryManagerList();
+            } else {
+                formBlock.classList.remove('hidden'); managerBlock.classList.add('hidden');
+            }
+        }
+
+        function renderCategoryManagerList() {
+            const listContainer = document.getElementById('manager-categories-list'); listContainer.innerHTML = '';
+            categories.forEach(cat => {
+                const item = document.createElement('div'); item.className = "flex justify-between items-center bg-[#0f172a] p-2 rounded-xl border border-gray-850 text-xs";
+                item.innerHTML = `
+                    <span class="font-medium text-white px-1">${cat}</span>
+                    <div class="flex gap-2">
+                        <button onclick="editCategoryPrompt('${cat}')" class="text-blue-400 hover:text-blue-300 font-bold">Edit</button>
+                        <button onclick="deleteCategoryEngine('${cat}')" class="text-rose-400 hover:text-rose-300 font-bold">✕</button>
+                    </div>`;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function addCategoryViaManager() {
+            const input = document.getElementById('new-custom-cat-input'); const val = input.value.trim(); if (!val) return;
+            if (!categories.some(c => c.toLowerCase() === val.toLowerCase())) {
+                categories.push(val); updateCategoryDropdownOptions(); renderCategoryManagerList(); input.value = ''; saveAndRefresh();
+            } else { alert("Category tag already exists!"); }
+        }
+
+        function editCategoryPrompt(oldName) {
+            const newName = prompt(`Change category tag name "${oldName}" to:`, oldName);
+            if (!newName || newName.trim() === "" || newName.trim() === oldName) return;
+            const sanitized = newName.trim();
+            if (categories.some(c => c.toLowerCase() === sanitized.toLowerCase() && c !== oldName)) return alert("A category tag with that name already exists!");
+            categories = categories.map(c => c === oldName ? sanitized : c);
+            transactions = transactions.map(t => t.category === oldName ? { ...t, category: sanitized } : t);
+            updateCategoryDropdownOptions(); renderCategoryManagerList(); saveAndRefresh();
+        }
+
+        function deleteCategoryEngine(targetName) {
+            if (categories.length <= 1) return alert("You must maintain at least 1 active category tag!");
+            const activeTxCount = transactions.filter(t => t.category === targetName).length;
+            if (confirm(activeTxCount > 0 ? `Warning! This tag is used in ${activeTxCount} transactions. Deleting it will automatically reassign those items to category "${categories.find(c => c !== targetName)}". Proceed?` : `Delete category tag "${targetName}"?`)) {
+                categories = categories.filter(c => c !== targetName); const fallback = categories[0];
+                transactions = transactions.map(t => t.category === targetName ? { ...t, category: fallback } : t);
+                updateCategoryDropdownOptions(); renderCategoryManagerList(); saveAndRefresh();
+            }
+        }
+
+        function updateCategoryDropdownOptions() {
+            const dropdown = document.getElementById('tx-category'); if(!dropdown) return;
+            dropdown.innerHTML = '';
+            categories.forEach(cat => {
+                const opt = document.createElement('option'); opt.value = cat; opt.innerText = cat; dropdown.appendChild(opt);
+            });
+        }
+
+        function formatLiveShorthand() {
+            const amountInput = document.getElementById('tx-amount'); const shorthandDisplay = document.getElementById('amount-shorthand');
+            const rawVal = parseFloat(amountInput.value); if (!rawVal || isNaN(rawVal)) { shorthandDisplay.innerText = ''; return; }
+            if (rawVal >= 1000000) shorthandDisplay.innerText = `➔ ${(rawVal / 1000000).toFixed(2)} M (Rp ${rawVal.toLocaleString('en-US')})`;
+            else if (rawVal >= 1000) shorthandDisplay.innerText = `➔ ${(rawVal / 1000).toFixed(1)} K (Rp ${rawVal.toLocaleString('en-US')})`;
+            else shorthandDisplay.innerText = `➔ Rp ${rawVal.toLocaleString('en-US')}`;
+        }
+
+        function formatCurrency(num) {
+            const absNum = Math.abs(num); if (absNum >= 1000000) return (num / 1000000).toFixed(2) + ' M';
+            if (absNum >= 1000) return (num / 1000).toFixed(1) + ' K'; return num.toLocaleString('en-US');
+        }
+
+        function buildDynamicMonthLabel(year, monthIndex, startDay) {
+            const tempStart = new Date(year, monthIndex, startDay);
+            if (startDay === 1) {
+                const tempEnd = new Date(year, monthIndex + 1, 0);
+                return `1 ${tempStart.toLocaleString('en-US', { month: 'short' })} - ${tempEnd.getDate()} ${tempStart.toLocaleString('en-US', { month: 'short' })} ${year}`;
+            } else {
+                const tempEnd = new Date(year, monthIndex + 1, startDay - 1);
+                return `${startDay} ${tempStart.toLocaleString('en-US', { month: 'short' })} - ${tempEnd.getDate()} ${tempEnd.toLocaleString('en-US', { month: 'short' })} ${tempEnd.getFullYear()}`;
+            }
+        }
+
+        const fn = buildDynamicMonthLabel;
+
+        // ========================================================
+        // 📊 REPAIRED CORE CHART & TOTAL VALUE LABEL FORMATTER MATRIX
+        // ========================================================
+        function initChart() {
+            const chartDom = document.querySelector("#finance-pie-chart"); if(!chartDom) return;
+            const options = {
+                chart: { type: 'donut', height: 260, foreColor: '#9ca3af' }, series: [0, 0], labels: ['Income', 'Expenses'], colors: ['#10b981', '#f43f5e'], legend: { position: 'bottom' },
+                dataLabels: { 
+                    enabled: true, 
+                    formatter: function (val, opts) {
+                        return `${val.toFixed(0)}%`;
+                    }
+                }, 
+                tooltip: {
+                    enabled: true,
+                    y: {
+                        formatter: function (val) {
+                            return `Rp ${val.toLocaleString('en-US')}`;
+                        }
+                    }
+                },
+                stroke: { colors: ['#1e293b'] },
+                plotOptions: { 
+                    pie: { 
+                        donut: { 
+                            labels: { 
+                                show: true, 
+                                name: {
+                                    show: true
+                                },
+                                value: {
+                                    show: true,
+                                    // --- BUGFIX: FORCES THE INTERNAL INDIVIDUAL VALUES TO USE RP AND COMMA ---
+                                    formatter: function (val) {
+                                        return `Rp ${parseFloat(val).toLocaleString('en-US')}`;
+                                    }
+                                },
+                                total: { 
+                                    show: true, 
+                                    label: 'Net Balance', 
+                                    color: '#ffffff', 
+                                    formatter: function (w) { 
+                                        // Calculates global dataset totals safely
+                                        const incSum = w.globals.series[0] || 0;
+                                        const expSum = w.globals.series[1] || 0;
+                                        const netBalance = incSum - expSum;
+                                        
+                                        // If everything collapses to 100% single slice, override text names dynamically
+                                        if (incSum > 0 && expSum === 0) { w.config.plotOptions.pie.donut.labels.total.label = "Income Only"; return `Rp ${incSum.toLocaleString('en-US')}`; }
+                                        if (expSum > 0 && incSum === 0) { w.config.plotOptions.pie.donut.labels.total.label = "Expenses Only"; return `Rp ${expSum.toLocaleString('en-US')}`; }
+                                        
+                                        w.config.plotOptions.pie.donut.labels.total.label = "Net Balance";
+                                        const formattedSign = netBalance < 0 ? '-' : '';
+                                        return `${formattedSign}Rp ${Math.abs(netBalance).toLocaleString('en-US', {maximumFractionDigits:0})}`; 
+                                    } 
+                                } 
+                            } 
+                        } 
+                    } 
+                }
+            };
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new ApexCharts(chartDom, options); chartInstance.render();
+        }
+
+        function saveTransactionEngine() {
+            const titleInput = document.getElementById('tx-title'); const amountInput = document.getElementById('tx-amount'); const dateInput = document.getElementById('tx-date');
+            const categorySelect = document.getElementById('tx-category'); const typeInput = document.querySelector('input[name="tx-type"]:checked'); const editingId = document.getElementById('tx-editing-id').value;
+
+            if (!titleInput.value || !amountInput.value || !dateInput.value) return alert("Please fill out all required fields!");
+            const selectedDate = new Date(dateInput.value); selectedDate.setHours(12, 0, 0, 0); 
+
+            if (editingId) {
+                transactions = transactions.map(t => t.id === parseInt(editingId) ? { ...t, title: titleInput.value, amount: parseFloat(amountInput.value), category: categorySelect.value, type: typeInput.value, date: selectedDate.toISOString() } : t);
+            } else {
+                transactions.unshift({ id: Date.now(), title: titleInput.value, amount: parseFloat(amountInput.value), category: categorySelect.value || 'General', type: typeInput.value, date: selectedDate.toISOString() });
+            }
+            clearTransactionForm(); transactions.sort((a, b) => new Date(b.date) - new Date(a.date)); saveAndRefresh();
+        }
+
+        function setupEditTransaction(id) {
+            const target = transactions.find(t => t.id === id); if (!target) return;
+            document.getElementById('form-action-title').innerText = "✏️ Edit Transaction"; document.getElementById('tx-editing-id').value = target.id;
+            document.getElementById('tx-title').value = target.title; document.getElementById('tx-amount').value = target.amount;
+            document.getElementById('tx-category').value = target.category; document.getElementById('tx-date').value = target.date.split('T')[0];
+            document.querySelector(`input[name="tx-type"][value="${target.type}"]`).checked = true;
+            document.getElementById('tx-submit-btn').innerText = "Update Transaction"; document.getElementById('tx-cancel-edit-btn').classList.remove('hidden');
+            formatLiveShorthand(); window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function clearTransactionForm() {
+            document.getElementById('form-action-title').innerText = "Add Transaction"; document.getElementById('tx-editing-id').value = "";
+            document.getElementById('tx-title').value = ""; document.getElementById('tx-amount').value = "";
+            document.getElementById('tx-date').value = new Date().toISOString().split('T')[0]; document.getElementById('amount-shorthand').innerText = "";
+            document.getElementById('tx-submit-btn').innerText = "Save Transaction"; document.getElementById('tx-cancel-edit-btn').classList.add('hidden');
+        }
+
+        function deleteTransaction(id) {
+            if (confirm("Delete this transaction entry?")) { transactions = transactions.filter(t => t.id !== id); saveAndRefresh(); }
+        }
+
+        function selectAndToggleMonthFocus(key) {
+            openAccordions[key] = !openAccordions[key];
+            targetedActiveMonthKey = key;
+            
+            // Sync dropdown element selection automatically when clicking a row card below
+            const dropdown = document.getElementById('chart-month-dropdown');
+            if (dropdown) dropdown.value = key;
+
+            if (activeChartScopeMode === "MONTHLY") {
+                document.getElementById('chart-card-title').innerText = `Monthly Focus (${key.split(' ')[1] || 'Focus'})`;
+            }
+            renderAnalytics(); 
+        }
+
+        // --- NEW SELECTOR WORKFLOW CALLED VIA THE RECTANGLE DROPDOWN BOX INTERFACE ---
+        function handleDropdownMonthSelection(chosenKey) {
+            targetedActiveMonthKey = chosenKey;
+            if (activeChartScopeMode === "MONTHLY") {
+                document.getElementById('chart-card-title').innerText = `Monthly Focus (${chosenKey.split(' ')[1] || 'Focus'})`;
+            }
+            renderAnalytics();
+        }
+
+        function switchScreen(screen) {
+            if (screen === 'dashboard') {
+                document.getElementById('dashboard-screen').classList.remove('hidden'); document.getElementById('analytics-screen').classList.add('hidden');
+                document.getElementById('nav-dashboard').className = "flex flex-col items-center gap-1 text-blue-400 font-semibold text-xs w-full py-2";
+                document.getElementById('nav-analytics').className = "flex flex-col items-center gap-1 text-gray-500 font-medium text-xs w-full py-2";
+            } else {
+                document.getElementById('dashboard-screen').classList.add('hidden'); document.getElementById('analytics-screen').classList.remove('hidden');
+                document.getElementById('nav-dashboard').className = "flex flex-col items-center gap-1 text-gray-500 font-medium text-xs w-full py-2";
+                document.getElementById('nav-analytics').className = "flex flex-col items-center gap-1 text-blue-400 font-semibold text-xs w-full py-2";
+                setTimeout(() => { if(chartInstance) chartInstance.windowResizeHandler(); }, 50);
+            }
+        }
+
+        function renderDashboard() {
+            let incomeSum = 0, expenseSum = 0;
+            const listContainer = document.getElementById('tx-list'); if(!listContainer) return;
+            listContainer.innerHTML = '';
+            
+            transactions.forEach(t => {
+                if (t.type === 'INCOME') incomeSum += t.amount; else expenseSum += t.amount;
+                const item = document.createElement('div'); item.className = "flex justify-between items-center bg-[#1e293b] p-4 rounded-xl border border-gray-850 shadow-md";
+                item.innerHTML = `
+                    <div>
+                        <div class="flex items-center gap-2"><p class="font-semibold text-white text-sm">${t.title}</p><span class="text-[10px] bg-[#0f172a] text-blue-300 font-bold px-2 py-0.5 rounded-md border border-gray-800">${t.category}</span></div>
+                        <p class="text-xs text-gray-400 mt-0.5">${new Date(t.date).toLocaleDateString('en-US', {dateStyle: 'medium'})}</p>
+                    </div>
+                    <div class="flex items-center gap-2.5 pl-2">
+                        <span class="font-bold text-sm mr-1 ${t.type === 'INCOME' ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${t.type === 'INCOME' ? '+' : '-'}Rp ${formatCurrency(t.amount)}
+                        </span>
+                        <button onclick="setupEditTransaction(${t.id})" class="text-gray-500 hover:text-blue-400 text-xs p-1 font-bold">✏️</button>
+                        <button onclick="deleteTransaction(${t.id})" class="text-gray-600 hover:text-rose-400 text-sm p-1 font-bold">✕</button>
+                    </div>`;
+                listContainer.appendChild(item);
+            });
+            document.getElementById('total-balance').innerText = `Rp ${(incomeSum - expenseSum).toLocaleString('en-US')}`;
+            document.getElementById('total-income').innerText = `+Rp ${formatCurrency(incomeSum)}`;
+            document.getElementById('total-expense').innerText = `-Rp ${formatCurrency(expenseSum)}`;
+            updateCategoryDropdownOptions();
+        }
+
+        function renderAnalytics() {
+            let focusedMonthIncTotal = 0, focusedMonthExpTotal = 0; 
+            let lifetimeIncTotal = 0, lifetimeExpTotal = 0;
+            
+            const monthlyGroup = {}, yearlyGroup = {};
+            const targetStartDay = parseInt(document.getElementById('cfg-month-start')?.value || 25);
+            const selectedFilterYear = parseInt(document.getElementById('cfg-view-year')?.value) || new Date().getFullYear();
+
+            transactions.forEach(t => {
+                const txDate = new Date(t.date); 
+                let tYear = txDate.getFullYear(); 
+                const yearKey = `Year Summary: ${tYear}`;
+                if (!yearlyGroup[yearKey]) yearlyGroup[yearKey] = { inc: 0, exp: 0 };
+                
+                if (t.type === 'INCOME') {
+                    yearlyGroup[yearKey].inc += t.amount; lifetimeIncTotal += t.amount;
+                } else {
+                    yearlyGroup[yearKey].exp += t.amount; lifetimeExpTotal += t.amount;
+                }
+            });
+
+            const today = new Date(); today.setHours(23, 59, 59, 999);
+            for (let m = 11; m >= 0; m--) {
+                const tempCycleStart = new Date(selectedFilterYear, m, targetStartDay); 
+                tempCycleStart.setHours(0, 0, 0, 0);
+                if (tempCycleStart > today) continue;
+                
+                const labelKey = fn(selectedFilterYear, m, targetStartDay);
+                monthlyGroup[labelKey] = { inc: 0, exp: 0, items: [] };
+            }
+
+            transactions.forEach(t => {
+                const txDate = new Date(t.date); 
+                let tYear = txDate.getFullYear(); 
+                let tMonth = txDate.getMonth(); 
+                let tDay = txDate.getDate();
+                
+                if (tYear !== selectedFilterYear) return;
+
+                let assignedMonthIndex = tMonth; 
+                let assignedMonthYear = tYear;
+                if (tDay < targetStartDay) { 
+                    assignedMonthIndex = tMonth - 1; 
+                    if (assignedMonthIndex < 0) { assignedMonthIndex = 11; assignedMonthYear--; } 
+                }
+                
+                const dataMatchKey = fn(assignedMonthYear, assignedMonthIndex, targetStartDay);
+                if (monthlyGroup[dataMatchKey]) {
+                    if (t.type === 'INCOME') monthlyGroup[dataMatchKey].inc += t.amount; else monthlyGroup[dataMatchKey].exp += t.amount;
+                    monthlyGroup[dataMatchKey].items.push(t);
+                }
+            });
+
+            // ==========================================
+            // 🔄 SYNCHRONIZE DROPDOWN INPUT BOX OPTION NODES
+            // ==========================================
+            const visibleMonthKeys = Object.keys(monthlyGroup);
+            const focusDropdown = document.getElementById('chart-month-dropdown');
+            
+            if (focusDropdown) {
+                const lastSelectedDropdownValue = focusDropdown.value;
+                focusDropdown.innerHTML = '';
+                visibleMonthKeys.forEach(k => {
+                    const opt = document.createElement('option');
+                    opt.value = k;
+                    opt.innerText = k.split(' - ')[0] + ' Focus'; // Simplified scannable label
+                    focusDropdown.appendChild(opt);
+                });
+                if (lastSelectedDropdownValue && visibleMonthKeys.includes(lastSelectedDropdownValue)) {
+                    focusDropdown.value = lastSelectedDropdownValue;
+                }
+            }
+
+            if (visibleMonthKeys.length > 0) {
+                if (!targetedActiveMonthKey || !monthlyGroup[targetedActiveMonthKey]) {
+                    targetedActiveMonthKey = visibleMonthKeys[0]; 
+                }
+                if (focusDropdown) focusDropdown.value = targetedActiveMonthKey;
+
+                monthlyGroup[targetedActiveMonthKey].items.forEach(item => {
+                    if (item.type === 'INCOME') focusedMonthIncTotal += item.amount; else focusedMonthExpTotal += item.amount;
+                });
+
+                if (activeChartScopeMode === "MONTHLY") {
+                    document.getElementById('chart-card-title').innerText = `Monthly Focus (${targetedActiveMonthKey.split(' ')[1] || 'Focus'})`;
+                }
+            } else {
+                targetedActiveMonthKey = null;
+                if (activeChartScopeMode === "MONTHLY") {
+                    document.getElementById('chart-card-title').innerText = "Monthly Focus";
+                }
+            }
+
+            if (chartInstance) {
+                if (activeChartScopeMode === "MONTHLY") {
+                    chartInstance.updateSeries([focusedMonthIncTotal, focusedMonthExpTotal]);
+                } else {
+                    chartInstance.updateSeries([lifetimeIncTotal, lifetimeExpTotal]);
+                }
+            }
+
+            // Render List Items
+            const mList = document.getElementById('monthly-list'); if(!mList) return; mList.innerHTML = '';
+            Object.keys(monthlyGroup).forEach(k => {
+                const isExpanded = !!openAccordions[k]; const container = document.createElement('div'); container.className = "border-b border-gray-850 last:border-none pb-2";
+                const hasTransactions = monthlyGroup[k].items.length > 0;
+                const isFocusedTarget = (k === targetedActiveMonthKey);
+
+                const headerRow = document.createElement('div'); 
+                headerRow.className = `flex justify-between items-center py-3 cursor-pointer select-none rounded-lg px-2 transition-all ${isFocusedTarget ? 'bg-[#1d273a] border border-blue-500/30 shadow-sm' : 'hover:bg-[#1a2333] active:bg-[#1c2436]'}`;
+                headerRow.setAttribute('onclick', `selectAndToggleMonthFocus('${k}')`);
+                headerRow.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-medium ${isFocusedTarget ? 'text-blue-400' : 'text-gray-200'} text-sm flex items-center gap-2"><span>${isExpanded ? '▼' : '▶'}</span> ${k}</span>
+                        <span class="font-semibold text-xs mt-1"><span class="text-emerald-400">+Rp ${formatCurrency(monthlyGroup[k].inc)}</span><span class="text-gray-600 mx-1">|</span><span class="text-rose-400">-Rp ${formatCurrency(monthlyGroup[k].exp)}</span></span>
+                    </div>
+                    <span class="text-xs ${hasTransactions ? 'text-gray-400 font-bold bg-[#0f172a]' : 'text-gray-600 italic bg-gray-900/10'} px-2.5 py-1 rounded-full border border-gray-800">${monthlyGroup[k].items.length} tx</span>`;
+                container.appendChild(headerRow);
+
+                if (isExpanded) {
+                    const detailPanel = document.createElement('div'); detailPanel.className = "mt-2 ml-4 pl-3 border-l-2 border-gray-700 space-y-2 bg-[#0f172a]/40 p-2 rounded-r-xl border border-gray-850";
+                    if (!hasTransactions) {
+                        detailPanel.innerHTML = `<p class="text-xs text-gray-500 italic py-1 pl-1">No transactions recorded for this cycle.</p>`;
+                    } else {
+                        monthlyGroup[k].items.forEach(item => {
+                            const row = document.createElement('div'); row.className = "flex justify-between items-center py-1.5 text-xs border-b border-gray-800/40 last:border-none";
+                            row.innerHTML = `<div><div class="flex items-center gap-1.5"><p class="font-semibold text-gray-300">${item.title}</p><span class="text-[9px] text-blue-400 bg-[#0f172a] border border-gray-800 px-1.5 py-0.2 rounded-sm">${item.category}</span></div><p class="text-[10px] text-gray-500 mt-0.5">${new Date(item.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</p></div>
+                                <span class="font-bold ${item.type === 'INCOME' ? 'text-emerald-400' : 'text-rose-400'}">${item.type === 'INCOME' ? '+' : '-'}Rp ${item.amount.toLocaleString('en-US')}</span>`;
+                            detailPanel.appendChild(row);
+                        });
+                    }
+                    container.appendChild(detailPanel);
+                }
+                mList.appendChild(container);
+            });
+
+            const yList = document.getElementById('yearly-list'); if(!yList) return; yList.innerHTML = '';
+            if (Object.keys(yearlyGroup).length === 0) { yList.innerHTML = `<p class="text-xs text-gray-500 italic text-center py-2">No historical tracking records found.</p>`; } 
+            else {
+                Object.keys(yearlyGroup).sort().reverse().forEach(k => {
+                    const yearData = yearlyGroup[k]; const netAmt = yearData.inc - yearData.exp;
+                    const row = document.createElement('div'); row.className = "flex justify-between items-center py-3 text-sm border-gray-800/40 first:pt-0";
+                    row.innerHTML = `<div class="flex flex-col"><span class="font-bold text-white">${k}</span><span class="text-[11px] text-gray-500 mt-0.5">🟢 +Rp ${formatCurrency(yearData.inc)} | 🔴 -Rp ${formatCurrency(yearData.exp)}</span></div><span class="font-bold text-sm ${netAmt >= 0 ? 'text-emerald-400' : 'text-rose-400'}">Net: Rp ${formatCurrency(netAmt)}</span>`;
+                    yList.appendChild(row);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
