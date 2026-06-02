@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen pb-20">
+
+    <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-50 text-center font-bold text-lg">
+        Personal Finance Tracker
+    </header>
+
+    <main class="max-w-md mx-auto p-4 space-y-6">
+
+        <section id="dashboard-screen" class="space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-gray-500 text-sm font-medium">Current Balance</h2>
+                <p id="total-balance" class="text-3xl font-bold text-gray-800 mt-1">$0.00</p>
+                <div class="flex justify-between mt-4 pt-4 border-t border-gray-100 text-sm font-semibold">
+                    <span class="text-green-600">Income: <span id="total-income">+$0.00</span></span>
+                    <span class="text-red-600">Expenses: <span id="total-expense">-$0.00</span></span>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 space-y-4">
+                <h3 class="text-gray-700 font-bold text-base">Add Transaction</h3>
+                <input id="tx-title" type="text" placeholder="Title (e.g., Grocery)" class="w-full p-3 border border-gray-300 rounded-xl focus:outline-blue-500">
+                <input id="tx-amount" type="number" placeholder="Amount ($)" class="w-full p-3 border border-gray-300 rounded-xl focus:outline-blue-500">
+                
+                <div class="flex gap-4">
+                    <label class="flex-1 flex items-center justify-center gap-2 p-3 bg-gray-50 rounded-xl border cursor-pointer border-gray-300 has-[:checked]:border-red-500 has-[:checked]:bg-red-50 text-gray-700">
+                        <input type="radio" name="tx-type" value="EXPENSE" checked class="accent-red-500"> Expense
+                    </label>
+                    <label class="flex-1 flex items-center justify-center gap-2 p-3 bg-gray-50 rounded-xl border cursor-pointer border-gray-300 has-[:checked]:border-green-500 has-[:checked]:bg-green-50 text-gray-700">
+                        <input type="radio" name="tx-type" value="INCOME" class="accent-green-500"> Income
+                    </label>
+                </div>
+                <button onclick="addTransaction()" class="w-full bg-blue-600 text-white font-bold p-3 rounded-xl shadow-md active:bg-blue-700 transition">Save Transaction</button>
+            </div>
+
+            <div class="space-y-2">
+                <h3 class="text-gray-600 font-bold text-sm px-1">Recent Activity</h3>
+                <div id="tx-list" class="space-y-2">
+                    </div>
+            </div>
+        </section>
+
+        <section id="analytics-screen" class="space-y-6 hidden">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 space-y-3">
+                <h3 class="text-gray-700 font-bold text-base">Expense vs Income Proportion</h3>
+                <div class="w-full h-6 bg-gray-200 rounded-full flex overflow-hidden">
+                    <div id="chart-income-bar" class="bg-green-500 h-full transition-all duration-500" style="width: 50%"></div>
+                    <div id="chart-expense-bar" class="bg-red-500 h-full transition-all duration-500" style="width: 50%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500 font-medium">
+                    <span>🟢 Income Ratio</span>
+                    <span>🔴 Expense Ratio</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 class="text-gray-700 font-bold mb-3 text-base">Monthly Summary</h3>
+                <div id="monthly-list" class="space-y-3 divide-y divide-gray-100"></div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 class="text-gray-700 font-bold mb-3 text-base">Yearly Summary</h3>
+                <div id="yearly-list" class="space-y-3 divide-y divide-gray-100"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg flex justify-around items-center h-16 max-w-md mx-auto z-50">
+        <button onclick="switchScreen('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-1 text-blue-600 font-semibold text-xs w-full py-2">
+            📊 <span>Dashboard</span>
+        </button>
+        <button onclick="switchScreen('analytics')" id="nav-analytics" class="flex flex-col items-center gap-1 text-gray-400 font-medium text-xs w-full py-2">
+            📈 <span>Analytics</span>
+        </button>
+    </nav>
+
+    <script>
+        let transactions = JSON.parse(localStorage.getItem('finance_data')) || [];
+
+        function saveAndRefresh() {
+            localStorage.setItem('finance_data', JSON.stringify(transactions));
+            renderDashboard();
+            renderAnalytics();
+        }
+
+        function addTransaction() {
+            const titleInput = document.getElementById('tx-title');
+            const amountInput = document.getElementById('tx-amount');
+            const typeInput = document.querySelector('input[name="tx-type"]:checked');
+
+            if (!titleInput.value || !amountInput.value) return alert("Fill in all fields");
+
+            const transaction = {
+                id: Date.now(),
+                title: titleInput.value,
+                amount: parseFloat(amountInput.value),
+                type: typeInput.value,
+                date: new Date().toISOString()
+            };
+
+            transactions.unshift(transaction);
+            titleInput.value = '';
+            amountInput.value = '';
+            saveAndRefresh();
+        }
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveAndRefresh();
+        }
+
+        function switchScreen(screen) {
+            if (screen === 'dashboard') {
+                document.getElementById('dashboard-screen').classList.remove('hidden');
+                document.getElementById('analytics-screen').classList.add('hidden');
+                document.getElementById('nav-dashboard').className = "flex flex-col items-center gap-1 text-blue-600 font-semibold text-xs w-full py-2";
+                document.getElementById('nav-analytics').className = "flex flex-col items-center gap-1 text-gray-400 font-medium text-xs w-full py-2";
+            } else {
+                document.getElementById('dashboard-screen').classList.add('hidden');
+                document.getElementById('analytics-screen').classList.remove('hidden');
+                document.getElementById('nav-dashboard').className = "flex flex-col items-center gap-1 text-gray-400 font-medium text-xs w-full py-2";
+                document.getElementById('nav-analytics').className = "flex flex-col items-center gap-1 text-blue-600 font-semibold text-xs w-full py-2";
+            }
+        }
+
+        function renderDashboard() {
+            let incomeSum = 0, expenseSum = 0;
+            const listContainer = document.getElementById('tx-list');
+            listContainer.innerHTML = '';
+
+            transactions.forEach(t => {
+                if (t.type === 'INCOME') incomeSum += t.amount;
+                else expenseSum += t.amount;
+
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center bg-white p-4 rounded-xl shadow-xs border border-gray-100 animate-fade-in";
+                item.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">${t.title}</p>
+                        <p class="text-xs text-gray-400">${new Date(t.date).toLocaleDateString()}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-sm ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}">
+                            ${t.type === 'INCOME' ? '+' : '-'}$${t.amount.toFixed(2)}
+                        </span>
+                        <button onclick="deleteTransaction(${t.id})" class="text-gray-300 hover:text-red-500 text-xs font-bold">✕</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+
+            const balance = incomeSum - expenseSum;
+            document.getElementById('total-balance').innerText = `$${balance.toFixed(2)}`;
+            document.getElementById('total-income').innerText = `+$${incomeSum.toFixed(2)}`;
+            document.getElementById('total-expense').innerText = `-$${expenseSum.toFixed(2)}`;
+        }
+
+        function renderAnalytics() {
+            let totalInc = 0, totalExp = 0;
+            const monthlyGroup = {}, yearlyGroup = {};
+
+            transactions.forEach(t => {
+                const dateObj = new Date(t.date);
+                const monthKey = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+                const yearKey = dateObj.getFullYear().toString();
+
+                if (t.type === 'INCOME') totalInc += t.amount; else totalExp += t.amount;
+
+                // Structure month buckets
+                if (!monthlyGroup[monthKey]) monthlyGroup[monthKey] = { inc: 0, exp: 0 };
+                if (t.type === 'INCOME') monthlyGroup[monthKey].inc += t.amount; else monthlyGroup[monthKey].exp += t.amount;
+
+                // Structure year buckets
+                if (!yearlyGroup[yearKey]) yearlyGroup[yearKey] = { inc: 0, exp: 0 };
+                if (t.type === 'INCOME') yearlyGroup[yearKey].inc += t.amount; else yearlyGroup[yearKey].exp += t.amount;
+            });
+
+            // Adjust graphical scale dynamic bars
+            const total = totalInc + totalExp;
+            if (total > 0) {
+                document.getElementById('chart-income-bar').style.width = `${(totalInc / total) * 100}%`;
+                document.getElementById('chart-expense-bar').style.width = `${(totalExp / total) * 100}%`;
+            } else {
+                document.getElementById('chart-income-bar').style.width = '50%';
+                document.getElementById('chart-expense-bar').style.width = '50%';
+            }
+
+            // Print Month lists
+            const mList = document.getElementById('monthly-list'); mList.innerHTML = '';
+            Object.keys(monthlyGroup).forEach(k => {
+                const row = document.createElement('div'); row.className = "flex justify-between py-2 text-sm";
+                row.innerHTML = `<span class="font-medium text-gray-700">${k}</span><span class="font-semibold text-gray-500">+$${monthlyGroup[k].inc.toFixed(0)} / <span class="text-red-500">-$${monthlyGroup[k].exp.toFixed(0)}</span></span>`;
+                mList.appendChild(row);
+            });
+
+            // Print Year lists
+            const yList = document.getElementById('yearly-list'); yList.innerHTML = '';
+            Object.keys(yearlyGroup).forEach(k => {
+                const row = document.createElement('div'); row.className = "flex justify-between py-2 text-sm";
+                const net = yearlyGroup[k].inc - yearlyGroup[k].exp;
+                row.innerHTML = `<span class="font-bold text-gray-800">${k}</span><span class="font-bold ${net >= 0 ? 'text-green-600' : 'text-red-600'}">Net: $${net.toFixed(2)}</span>`;
+                yList.appendChild(row);
+            });
+        }
+
+        // Initialize setup elements right away
+        saveAndRefresh();
+    </script>
+</body>
+</html>
